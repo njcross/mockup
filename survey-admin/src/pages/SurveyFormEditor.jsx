@@ -64,12 +64,22 @@ export default function SurveyFormEditor() {
     setQuestionsBySurvey({ ...questionsBySurvey, [selSurvey.id]: next });
   }
 
+  // NEW: Create brand-new survey (blank)
+  function createNewSurvey() {
+    const nextId = Math.max(0, ...surveys.map(s => s.id)) + 1;
+    const newSurvey = { id: nextId, title: "Untitled Survey", version: "1.0" };
+    setSurveys(prev => [...prev, newSurvey]);
+    setQuestionsBySurvey(prev => ({ ...prev, [nextId]: [] }));
+    setSelectedId(nextId);
+  }
+
   function save() {
     // Wire to your API later
     console.log("SAVE survey meta", selSurvey);
     console.log("SAVE questions", selQs);
     alert("Saved (stub). Check console for payload.");
   }
+
   function duplicate() {
     if (!selSurvey) return;
     const nextId = Math.max(0, ...surveys.map(s => s.id)) + 1;
@@ -87,7 +97,7 @@ export default function SurveyFormEditor() {
       <header className="sfe-top">
         <div>
           <h1>Edit Survey</h1>
-          <p className="muted">Select an existing survey to edit its title, version, and questions.</p>
+          <p className="muted">Select an existing survey or create a new one, then edit its meta and questions.</p>
         </div>
         <div className="row gap">
           <button className="btn" onClick={duplicate}>Duplicate</button>
@@ -100,6 +110,8 @@ export default function SurveyFormEditor() {
         <aside className="sfe-left">
           <div className="left-head">
             <h3>Surveys</h3>
+            {/* NEW: Create button */}
+            <button className="btn small" onClick={createNewSurvey}>+ New</button>
           </div>
           <ul className="sfe-list">
             {surveys.map(s => (
