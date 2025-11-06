@@ -8,7 +8,7 @@
 }
 .progress { position: relative; width: 260px; height: 10px; background: rgba(255,255,255,.08); border-radius: 999px; }
 .progress-bar { height: 100%; border-radius: 999px; background: var(--fe-accent); transition: width .25s; }
-.progress-label { position: absolute; right: -44px; top: -4px; font-size: .9rem; color: #e2e8f0; }
+.progress-label { position: absolute; right: -44px; top: -4px; font-size: .9rem; color: #00050b; }
 
 .survey-main { padding: 16px; max-width: 900px; margin: 0 auto; width: 100%; }
 .card {

@@ -1,5 +1,5 @@
 import React from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./survey.css";
 
 const STEPS = [
@@ -40,22 +40,62 @@ const STEPS = [
   { id: "review", kind: "review" },
 ];
 
+/** Demo grading to seed into localStorage if not present */
+const DEMO_GRADES = {
+  s1: {
+    score: 4,
+    comment: "Good maturity—move toward automated discovery for full coverage.",
+    tasks: [
+      { text: "Evaluate auto-discovery with Lansweeper/CMDB", status: "open" },
+      { text: "Add decommission checklist to SOP", status: "review" },
+    ],
+  },
+  s2: {
+    score: 3,
+    comment: "Coverage is partial; unify sources via MDM + EDR for accuracy.",
+    tasks: [{ text: "Roll out MDM to remaining endpoints", status: "attention" }],
+  },
+  s3: {
+    score: 2,
+    comment: "Patch SLAs frequently missed; implement weekly cadence for crit vulns.",
+    tasks: [
+      { text: "Define SLAs (7/30/90) by severity", status: "open" },
+      { text: "Add SLA alerts to Slack", status: "open" },
+    ],
+  },
+  s4: {
+    score: 5,
+    comment: "Clear workflow with ticketing + validation. Strong evidence provided.",
+    tasks: [],
+  },
+};
+
 export default function ClientSurveyMock() {
   const [i, setI] = useState(0);
   const [answers, setAnswers] = useState({});
   const step = STEPS[i];
 
+  // Seed demo grading data once (non-destructive: only if keys are missing)
+  useEffect(() => {
+    Object.entries(DEMO_GRADES).forEach(([qid, payload]) => {
+      const key = `fe_grade:${qid}`;
+      if (!localStorage.getItem(key)) {
+        localStorage.setItem(key, JSON.stringify(payload));
+      }
+    });
+  }, []);
+
   const progress = useMemo(() => {
-    const questionCount = STEPS.filter(s => s.kind === "question").length;
-    const answered = Object.keys(answers).length;
-    return 0;
-    //return Math.round((answered / questionCount) * 100);
+    const questionIds = STEPS.filter((s) => s.kind === "question").map((s) => s.id);
+    const answered = questionIds.filter(
+      (id) => answers[id] !== undefined && answers[id] !== null
+    ).length;
+    return Math.round((answered / questionIds.length) * 100);
   }, [answers]);
 
   function setAnswer(id, value) {
-    setAnswers(prev => ({ ...prev, [id]: value }));
+    setAnswers((prev) => ({ ...prev, [id]: value }));
   }
-
   function back() {
     if (i > 0) setI(i - 1);
   }
@@ -72,7 +112,7 @@ export default function ClientSurveyMock() {
         </div>
         <div className="progress">
           <div className="progress-bar" style={{ width: `${progress}%` }} />
-          <span className="progress-label">Progress: {progress}%</span>
+          <span className="progress-label">{progress}%</span>
         </div>
       </header>
 
@@ -95,7 +135,10 @@ export default function ClientSurveyMock() {
           )}
 
           {step.kind === "review" && (
-            <ReviewStep answers={answers} onSubmit={() => alert("Stub: submit to backend")} />
+            <ReviewStep
+              answers={answers}
+              onSubmit={() => alert("Stub: submit to backend")}
+            />
           )}
         </div>
       </main>
@@ -110,7 +153,11 @@ export default function ClientSurveyMock() {
           <button className="btn" disabled={i === 0} onClick={back}>
             Back
           </button>
-          <button className="btn btn-primary" onClick={next} disabled={i === STEPS.length - 1}>
+          <button
+            className="btn btn-primary"
+            onClick={next}
+            disabled={i === STEPS.length - 1}
+          >
             Next
           </button>
         </div>
@@ -127,7 +174,7 @@ function QuestionStep({ step, value, onChange }) {
 
       {step.type === "single" && (
         <ul className="choice-list">
-          {step.options.map(opt => (
+          {step.options.map((opt) => (
             <li key={opt}>
               <label className="choice">
                 <input
@@ -145,7 +192,7 @@ function QuestionStep({ step, value, onChange }) {
 
       {step.type === "multi" && (
         <ul className="choice-list">
-          {step.options.map(opt => {
+          {step.options.map((opt) => {
             const set = new Set(value || []);
             const checked = set.has(opt);
             return (
@@ -154,7 +201,7 @@ function QuestionStep({ step, value, onChange }) {
                   <input
                     type="checkbox"
                     checked={checked}
-                    onChange={e => {
+                    onChange={(e) => {
                       const next = new Set(value || []);
                       if (e.target.checked) next.add(opt);
                       else next.delete(opt);
@@ -171,7 +218,7 @@ function QuestionStep({ step, value, onChange }) {
 
       {step.type === "rating" && (
         <div className="score-row">
-          {Array.from({ length: step.scale }, (_, n) => n + 1).map(n => (
+          {Array.from({ length: step.scale }, (_, n) => n + 1).map((n) => (
             <button
               key={n}
               className={`score-pill ${value === n ? "active" : ""}`}
@@ -189,7 +236,7 @@ function QuestionStep({ step, value, onChange }) {
           rows={6}
           placeholder="Write your answer…"
           value={value || ""}
-          onChange={e => onChange(step.id, e.target.value)}
+          onChange={(e) => onChange(step.id, e.target.value)}
         />
       )}
     </>
@@ -197,19 +244,76 @@ function QuestionStep({ step, value, onChange }) {
 }
 
 function ReviewStep({ answers, onSubmit }) {
+  const entries = Object.entries(answers);
+
+  function getQuestionLabel(id) {
+    const q = STEPS.find((s) => s.kind === "question" && s.id === id);
+    return q ? q.title : id;
+  }
+  function loadGradingFor(questionId) {
+    try {
+      const raw = localStorage.getItem(`fe_grade:${questionId}`);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+
   return (
     <>
       <h2>Review your answers</h2>
       <ul className="review-list">
-        {Object.entries(answers).map(([id, v]) => (
-          <li key={id}>
-            <div className="muted">{id}</div>
-            <div className="review-value">
-              {Array.isArray(v) ? v.join(", ") : String(v)}
-            </div>
-          </li>
-        ))}
+        {entries.length === 0 && <li className="muted">No answers yet.</li>}
+
+        {entries.map(([id, v]) => {
+          const label = getQuestionLabel(id);
+          const grading = loadGradingFor(id); // {score, comment, tasks[]}|null
+          return (
+            <li key={id} className="review-item">
+              <div className="review-label">{label}</div>
+
+              <div className="review-value">
+                {Array.isArray(v) ? v.join(", ") : String(v)}
+              </div>
+
+              {grading && (
+                <div className="review-grading">
+                  <div className="grade-line">
+                    <span className="badge">Score</span>
+                    <span className="grade-score">
+                      {typeof grading.score === "number" ? `${grading.score}/5` : "—"}
+                    </span>
+                  </div>
+
+                  {grading.comment && (
+                    <div className="grade-comment">
+                      <span className="badge">Reviewer Comment</span>
+                      <p>{grading.comment}</p>
+                    </div>
+                  )}
+
+                  <div className="grade-tasks">
+                    <span className="badge">Tasks</span>
+                    {Array.isArray(grading.tasks) && grading.tasks.length ? (
+                      <ul className="task-list">
+                        {grading.tasks.map((t, i) => (
+                          <li key={i} className="task-line">
+                            <span className="task-text">{t.text}</span>
+                            <span className="task-status">{t.status ?? "open"}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="muted">No tasks assigned.</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </li>
+          );
+        })}
       </ul>
+
       <div className="row end mt-2">
         <button className="btn btn-primary" onClick={onSubmit}>
           Submit
