@@ -1,0 +1,12 @@
+/* src/styles/variables.css */
+:root{
+  --fe-header-bg: rgba(15, 23, 42, 0.85);
+  --fe-header-border: rgba(255,255,255,0.08);
+  --fe-tab-bg: rgba(255,255,255,0.06);
+  --fe-tab-active-bg: rgba(0, 173, 181, 0.25);
+  --fe-tab-text: #e2e8f0;
+  --fe-brand-text: #e2e8f0;
+  --fe-muted: #93a4b5;
+  --fe-accent: #00adb5;
+  --fe-round: 14px;
+}
